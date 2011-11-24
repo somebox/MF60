@@ -1,0 +1,157 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+gem 'activesupport'
+gem 'actionpack'
+require 'ap'
+require 'action_view'
+require 'httparty'
+require 'thor'
+include ActiveSupport::Inflector
+include ActionView::Helpers::NumberHelper
+include ActionView::Helpers::DateHelper
+
+DEVICE_URL = "http://swisscom-mf60.home/"
+#DEVICE_URL = "http://192.168.0.1/"
+USER='admin'
+PASSWORD=ENV['MF60PW']
+
+class MF60
+  include HTTParty
+  format :html
+  
+  def initialize(user, pass)
+    @lucknum = 123456
+    response = self.class.post(
+                  DEVICE_URL + '/goform/goform_process',
+                  :body => {
+                    'user' => user, 
+                    'psw' => pass,
+                    'goformId'=>'LOGIN',
+                    'lucknum'=>@lucknum
+                  }
+                )
+    @cookie = response.headers['set-cookie']
+  end
+  
+  def get(path)
+    response = self.class.get(DEVICE_URL + path, :headers => {'Cookie' => @cookie})
+  end
+  
+  def connect
+    self.net_connect(true)
+  end
+  
+  def disconnect
+    self.net_connect(false)
+  end
+  
+  def reset
+    self.disconnect
+    sleep 4
+    self.connect
+  end
+  
+  def stats
+    response = self.get('/adm/statistics.asp')
+    info = response.match(/var realtime_statistics = '([\d\,]+)'/)[1]
+    stats = info.split(',')
+    {
+      :current_trans => number_to_human_size(stats[2]),
+      :current_recv  => number_to_human_size(stats[3]),
+      :connect_time  => "%02d:%02d" % [stats[4].to_i/60, stats[4].to_i%60],
+      :total_recv   => number_to_human_size(stats[5])
+    }
+  end
+  
+  def status
+    response = self.get('/air_network/wireless_info.asp')
+    vars = %w(provider network_type_var cardstate current_network_mode rscp ecio)
+    status = {}
+    vars.each do |var_name|
+      status[var_name.to_sym] = self.grab_var(response, var_name)
+    end
+    ap status
+  end
+  
+  protected
+  
+    # mode: 'connect' or 'disconnect'
+    def net_connect(active)
+      body = {
+        'goformId'=>'NET_CONNECT',
+        'lucknum_NET_CONNECT'=>@lucknum
+      }
+      if active
+        body['dial_mode'] = 'auto_dial'
+      else
+        body['dial_mode'] = 'manual_dial'
+        body['action'] = 'disconnect'
+      end
+      response = self.class.post(DEVICE_URL + '/goform/goform_process', :body => body)
+    end
+    
+    def grab_var(response, var_name)
+      part = response.match(/var\s+#{var_name}\s+=\s+'([^']+)'/)
+      part.present? ? part[1] : ''
+    end
+end
+
+def usage
+  app = File.basename($0)
+  puts "Usage: #{app} <command>"
+  puts "Commands:"
+  puts "  status      current device info"
+  puts "  stats       show connection statistics"
+  puts "  connect     connect WAN (3G/2G)"
+  puts "  disconnect  disconnect WAN"
+  puts "  reset       reset (disconnect, then connect)"
+end
+
+def reset
+  mf60 = MF60.new(USER, PASSWORD)
+  mf60.reset
+end
+
+def status
+  mf60 = MF60.new(USER, PASSWORD)
+  mf60.status
+end
+
+def connect
+  mf60 = MF60.new(USER, PASSWORD)
+  mf60.connect
+end
+
+def disconnect
+  mf60 = MF60.new(USER, PASSWORD)
+  mf60.disconnect
+end
+
+
+def stats
+  mf60 = MF60.new(USER, PASSWORD)
+  info = mf60.stats
+  puts 'MF60 Current Statistics'
+  puts '-----------------------'
+  puts "Connect Time : #{info[:connect_time]}"
+  puts "Transmitted  : #{info[:current_trans]}"
+  puts "Received     : #{info[:current_recv]}"
+  puts "Total Recv   : #{info[:total_recv]}"
+end
+
+case ARGV[0].to_s.downcase
+  when "stats"
+    stats
+  when "status"
+    status
+  when "reset"
+    reset
+  when "connect"
+    connect
+  when "disconnect"
+    disconnect
+  else
+    usage
+end
+
+#vim: set ft=ruby
