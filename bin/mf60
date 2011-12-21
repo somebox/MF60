@@ -10,11 +10,13 @@ include ActiveSupport::Inflector
 include ActionView::Helpers::NumberHelper
 include ActionView::Helpers::DateHelper
 
-DEVICE_URL = "http://swisscom-mf60.home/"
-#DEVICE_URL = "http://192.168.0.1/"
-USER='admin'
-PASSWORD=ENV['MF60PW']
+DEVICE_URL = ENV['MF60URL'] || "http://swisscom-mf60.home/"
+USER       ='admin'
+PASSWORD   = ENV['MF60PW'] || raise("Error: No password set. Environment var MF60PW should contain the device password.")
 
+# The MF60 requires some kind of "luck number" with each post, but it does
+# not seem to make mich difference what it is. The cookie is required to 
+# maintain the session after login.
 class MF60
   include HTTParty
   format :html
@@ -75,6 +77,13 @@ class MF60
   
   protected
   
+    def bytes_formatted(bytes)
+      units = ['','b','K','M','G','T')
+      t = 1
+      while bytes > 1024*t
+        
+    end
+    
     # mode: 'connect' or 'disconnect'
     def net_connect(active)
       body = {
