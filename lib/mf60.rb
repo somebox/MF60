@@ -3,11 +3,13 @@ require 'httparty'
 require 'mf60/version'
 require 'mf60/helpers'
 
+# The MF60 requires some kind of "luck number" with each post, but it does
+# not seem to make mich difference what it is. The cookie is required to 
+# maintain the session after login.
+
 module MF60
   class Client
     DEVICE_URL = ENV['MF60URL'] || "http://swisscom-mf60.home/"
-    USER       ='admin'
-    PASSWORD   = ENV['MF60PW'] || raise("Error: No password set. Environment var MF60PW should contain the device password.")
     
     include HTTParty
     format :html
@@ -31,11 +33,11 @@ module MF60
     end
 
     def connect
-      self.net_connect(true)
+      net_connect(true)
     end
 
     def disconnect
-      self.net_connect(false)
+      net_connect(false)
     end
 
     def reset
@@ -49,10 +51,10 @@ module MF60
       info = response.match(/var realtime_statistics = '([\d\,]+)'/)[1]
       stats = info.split(',')
       {
-        :current_trans => number_to_human_size(stats[2]),
-        :current_recv  => number_to_human_size(stats[3]),
+        :current_trans => stats[2].to_i,
+        :current_recv  => stats[3].to_i,
         :connect_time  => "%02d:%02d" % [stats[4].to_i/60, stats[4].to_i%60],
-        :total_recv   => number_to_human_size(stats[5])
+        :total_recv   => stats[5].to_i
       }
     end
 
@@ -61,7 +63,7 @@ module MF60
       vars = %w(provider network_type_var cardstate current_network_mode rscp ecio)
       status = {}
       vars.each do |var_name|
-        status[var_name.to_sym] = self.grab_var(response, var_name)
+        status[var_name.to_sym] = grab_var(response, var_name)
       end
       status
     end
@@ -85,7 +87,7 @@ module MF60
 
       def grab_var(response, var_name)
         part = response.match(/var\s+#{var_name}\s+=\s+'([^']+)'/)
-        part.present? ? part[1] : ''
+        part ? part[1] : ''
       end
       
   end

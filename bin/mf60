@@ -1,159 +1,65 @@
 #!/usr/bin/env ruby
 require 'rubygems'
-gem 'activesupport'
-gem 'actionpack'
-require 'ap'
-require 'action_view'
+require 'mf60'
 require 'httparty'
 require 'thor'
-include ActiveSupport::Inflector
-include ActionView::Helpers::NumberHelper
-include ActionView::Helpers::DateHelper
 
-DEVICE_URL = ENV['MF60URL'] || "http://swisscom-mf60.home/"
-USER       ='admin'
-PASSWORD   = ENV['MF60PW'] || raise("Error: No password set. Environment var MF60PW should contain the device password.")
+class MF60Util < Thor
+  # Usage: #{app} <command>
+  # Commands:
+  #   status      current device info
+  #   stats       show connection statistics
+  #   connect     connect WAN (3G/2G)
+  #   disconnect  disconnect WAN
+  #   reset       reset (disconnect, then connect)
 
-# The MF60 requires some kind of "luck number" with each post, but it does
-# not seem to make mich difference what it is. The cookie is required to 
-# maintain the session after login.
-class MF60
-  include HTTParty
-  format :html
-  
-  def initialize(user, pass)
-    @lucknum = 123456
-    response = self.class.post(
-                  DEVICE_URL + '/goform/goform_process',
-                  :body => {
-                    'user' => user, 
-                    'psw' => pass,
-                    'goformId'=>'LOGIN',
-                    'lucknum'=>@lucknum
-                  }
-                )
-    @cookie = response.headers['set-cookie']
-  end
-  
-  def get(path)
-    response = self.class.get(DEVICE_URL + path, :headers => {'Cookie' => @cookie})
-  end
-  
-  def connect
-    self.net_connect(true)
-  end
-  
-  def disconnect
-    self.net_connect(false)
-  end
-  
+  USER       ='admin'
+  PASSWORD   = ENV['MF60PW'] || raise("Error: No password set. Environment var MF60PW should contain the device password.")
+
+  desc "reset", "Reset the WAN connection"
   def reset
-    self.disconnect
-    sleep 4
-    self.connect
+    mf60 = MF60::Client.new(USER, PASSWORD)
+    mf60.reset
   end
-  
-  def stats
-    response = self.get('/adm/statistics.asp')
-    info = response.match(/var realtime_statistics = '([\d\,]+)'/)[1]
-    stats = info.split(',')
-    {
-      :current_trans => number_to_human_size(stats[2]),
-      :current_recv  => number_to_human_size(stats[3]),
-      :connect_time  => "%02d:%02d" % [stats[4].to_i/60, stats[4].to_i%60],
-      :total_recv   => number_to_human_size(stats[5])
-    }
+
+  desc "connect", "Connect to the cellular network"
+  def connect
+    mf60 = MF60::Client.new(USER, PASSWORD)
+    mf60.connect
   end
-  
+
+  desc "disconnect", "Disconnect from the cellular network"
+  def disconnect
+    mf60 = MF60::Client.new(USER, PASSWORD)
+    mf60.disconnect
+  end
+
+  desc "status", "Display connection status and signal strength"
   def status
-    response = self.get('/air_network/wireless_info.asp')
-    vars = %w(provider network_type_var cardstate current_network_mode rscp ecio)
-    status = {}
-    vars.each do |var_name|
-      status[var_name.to_sym] = self.grab_var(response, var_name)
-    end
-    ap status
+    mf60 = MF60::Client.new(USER, PASSWORD)
+    st = mf60.status
+    puts 'MF60 Current Status'
+    puts '-------------------'
+    puts "Provider     : #{st[:provider]}"
+    puts "Network Type : #{st[:network_type_var]}"
+    puts "Device State : #{st[:cardstate]}"
+    puts "Network Mode : #{st[:current_network_mode]}" if st[:current_network_mode] =~ /.+/
+    puts "rscp/ecio    : #{st[:rscp]}/#{st[:ecio]}"
   end
-  
-  protected
-  
-    # mode: 'connect' or 'disconnect'
-    def net_connect(active)
-      body = {
-        'goformId'=>'NET_CONNECT',
-        'lucknum_NET_CONNECT'=>@lucknum
-      }
-      if active
-        body['dial_mode'] = 'auto_dial'
-      else
-        body['dial_mode'] = 'manual_dial'
-        body['action'] = 'disconnect'
-      end
-      response = self.class.post(DEVICE_URL + '/goform/goform_process', :body => body)
-    end
-    
-    def grab_var(response, var_name)
-      part = response.match(/var\s+#{var_name}\s+=\s+'([^']+)'/)
-      part.present? ? part[1] : ''
-    end
+
+  desc "stats", "Get statistics and usage info"
+  def stats
+    mf60 = MF60::Client.new(USER, PASSWORD)
+    info = mf60.stats
+    puts 'MF60 Current Statistics'
+    puts '-----------------------'
+    puts "Connect Time : #{info[:connect_time]}"
+    puts "Transmitted  : #{MF60::Helpers.bytes_formatted(info[:current_trans])}"
+    puts "Received     : #{MF60::Helpers.bytes_formatted(info[:current_recv])}"
+    puts "Total Recv   : #{MF60::Helpers.bytes_formatted(info[:total_recv])}"
+  end
 end
 
-def usage
-  app = File.basename($0)
-  puts "Usage: #{app} <command>"
-  puts "Commands:"
-  puts "  status      current device info"
-  puts "  stats       show connection statistics"
-  puts "  connect     connect WAN (3G/2G)"
-  puts "  disconnect  disconnect WAN"
-  puts "  reset       reset (disconnect, then connect)"
-end
-
-def reset
-  mf60 = MF60.new(USER, PASSWORD)
-  mf60.reset
-end
-
-def status
-  mf60 = MF60.new(USER, PASSWORD)
-  mf60.status
-end
-
-def connect
-  mf60 = MF60.new(USER, PASSWORD)
-  mf60.connect
-end
-
-def disconnect
-  mf60 = MF60.new(USER, PASSWORD)
-  mf60.disconnect
-end
-
-
-def stats
-  mf60 = MF60.new(USER, PASSWORD)
-  info = mf60.stats
-  puts 'MF60 Current Statistics'
-  puts '-----------------------'
-  puts "Connect Time : #{info[:connect_time]}"
-  puts "Transmitted  : #{info[:current_trans]}"
-  puts "Received     : #{info[:current_recv]}"
-  puts "Total Recv   : #{info[:total_recv]}"
-end
-
-case ARGV[0].to_s.downcase
-  when "stats"
-    stats
-  when "status"
-    status
-  when "reset"
-    reset
-  when "connect"
-    connect
-  when "disconnect"
-    disconnect
-  else
-    usage
-end
+MF60Util.start
 
 #vim: set ft=ruby
