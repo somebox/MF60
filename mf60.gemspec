@@ -8,8 +8,8 @@ Gem::Specification.new do |s|
   s.authors     = ["Jeremy Seitz"]
   s.email       = ["jeremy@somebox.com"]
   s.homepage    = ""
-  s.summary     = %q{TODO: Tools for interfacing with the MF60 mobile internet hotspot device.}
-  s.description = %q{TODO: A library and command-line tool that talk to the MF60 via the admin web interface. This little box is available from Swisscom (and possibly others). Get statistics, network info, signal strength, and connect, disconnect and reset the device.}
+  s.summary     = %q{Ruby library and command-line tool for interfacing with the MF60 mobile internet hotspot device.}
+  s.description = %q{A library and command-line tool that talk to the MF60 via the admin web interface. This little battery-powered box is available from Swisscom in Switzerland (as well as mobile operators in other countries). With this gem you can get statistics, network info, signal strength, connect, disconnect and reset the device.}
 
   s.rubyforge_project = "mf60"
 
@@ -20,5 +20,9 @@ Gem::Specification.new do |s|
 
   # specify any dependencies here; for example:
 
-  # s.add_runtime_dependency "rest-client"
+  s.add_runtime_dependency "httparty"
+  s.add_runtime_dependency "thor"  
+  
+  s.add_development_dependency "guard"
+  s.add_development_dependency "guard-test"  
 end

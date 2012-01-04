@@ -77,13 +77,6 @@ class MF60
   
   protected
   
-    def bytes_formatted(bytes)
-      units = ['','b','K','M','G','T')
-      t = 1
-      while bytes > 1024*t
-        
-    end
-    
     # mode: 'connect' or 'disconnect'
     def net_connect(active)
       body = {
