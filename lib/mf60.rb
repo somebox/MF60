@@ -42,7 +42,7 @@ module MF60
 
     def reset
       self.disconnect
-      sleep 4
+      sleep 5
       self.connect
     end
     
@@ -101,6 +101,7 @@ module MF60
           body['action'] = 'disconnect'
         end
         response = self.class.post(DEVICE_URL + '/goform/goform_process', :body => body)
+        response.success?
       end
 
       def grab_var(response, var_name)
