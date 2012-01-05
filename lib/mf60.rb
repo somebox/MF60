@@ -58,6 +58,23 @@ module MF60
       }
     end
 
+    # 
+    # 0        -113 dBm or less  
+    # 1        -111 dBm  
+    # 2...30   -109... -53 dBm  
+    # 31        -51 dBm or greater  "good"
+    # 
+    # 99 not known or not detectable
+    #
+    # RSCP is the received signal code power from the CPICH channel and it is usually constant in a cell and it gives an indication of the level in the area.
+    # RSSI: is the received signal strength indicator and it is the total power with the noise.
+    # Ec/N0 : is the Received Signal Code Power equal to RSCP/RSSI or the code power over (noise+code power)
+    # So... rscp/rssi = ecno
+    # 
+    # rscp            
+    # ---- = ecio   |   rscp = ecio * rssi   |   rssi = rscp/ecio
+    # rssi            
+    
     def status
       response = self.get('/air_network/wireless_info.asp')
       vars = %w(provider network_type_var cardstate current_network_mode rscp ecio)
@@ -65,6 +82,7 @@ module MF60
       vars.each do |var_name|
         status[var_name.to_sym] = grab_var(response, var_name)
       end
+      status[:rssi] = (status[:rscp].to_f/status[:ecio].to_f)
       status
     end
     
