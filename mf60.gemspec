@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.version     = MF60::VERSION
   s.authors     = ["Jeremy Seitz"]
   s.email       = ["jeremy@somebox.com"]
-  s.homepage    = ""
+  s.homepage    = "https://github.com/somebox/MF60"
   s.summary     = %q{Ruby library and command-line tool for interfacing with the MF60 mobile internet hotspot device.}
   s.description = %q{A library and command-line tool that talk to the MF60 via the admin web interface. This little battery-powered box is available from Swisscom in Switzerland (as well as mobile operators in other countries). With this gem you can get statistics, network info, signal strength, connect, disconnect and reset the device.}
 

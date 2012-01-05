@@ -9,7 +9,7 @@ require 'mf60/helpers'
 
 module MF60
   class Client
-    DEVICE_URL = ENV['MF60URL'] || "http://swisscom-mf60.home/"
+    DEVICE_URL = ENV['MF60URL'] || "http://192.168.0.1"
     
     include HTTParty
     format :html
