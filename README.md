@@ -2,7 +2,7 @@
 
 A library and command-line utility to control the [MF60 portable hotspot device](http://www.modem3g.com/zte-mf60-mobile-hotspot.html).
 
-![my mf60](http://dl.dropbox.com/u/385855/mf60.jpg)
+![my mf60](https://cloud.githubusercontent.com/assets/7750/21075192/281e9b4c-bf0c-11e6-8a75-f00f4aa58235.jpg)
 
 The MF60 is a portable, personal WIFI hotspot that is sold worldwide in countries like Australia and Switzerland. It makes a 3G or 2G connection available over WIFI to several devices, and has it's own batter power (well, just a few hours without help from USB). Apparently, over a million of these devices were sold in Australia alone last year.
 
